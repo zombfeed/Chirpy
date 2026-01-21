@@ -50,6 +50,18 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 	respondWithJSON(w, http.StatusCreated, convertDBToChirp(chirp))
 }
 
+func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
+	chirps, err := cfg.dbQueries.GetChirps(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "could not get chirps", err)
+	}
+	chirpArray := []Chirp{}
+	for _, c := range chirps {
+		chirpArray = append(chirpArray, convertDBToChirp(c))
+	}
+	respondWithJSON(w, http.StatusOK, chirpArray)
+}
+
 func convertDBToChirp(chirp database.Chirp) Chirp {
 	return Chirp{
 		ID:        chirp.ID,
