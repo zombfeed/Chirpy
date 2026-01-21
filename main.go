@@ -38,8 +38,8 @@ func main() {
 	smux.Handle("/app/", fileServer)
 
 	smux.HandleFunc("GET /api/healthz", handlerReadiness)
-	smux.HandleFunc("POST /api/validate_chirp", handlerValidate)
 	smux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser)
+	smux.HandleFunc("POST /api/chirps", apiCfg.handlerCreateChirp)
 
 	smux.HandleFunc("GET /admin/metrics", apiCfg.handlerHits)
 	smux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
