@@ -43,6 +43,7 @@ func main() {
 
 	smux.HandleFunc("POST /api/chirps", apiCfg.handlerCreateChirp)
 	smux.HandleFunc("GET /api/chirps", apiCfg.handlerGetChirps)
+	smux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerGetChirpByID)
 
 	smux.HandleFunc("GET /admin/metrics", apiCfg.handlerHits)
 	smux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
