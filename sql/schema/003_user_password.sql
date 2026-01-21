@@ -1,7 +1,8 @@
 -- +goose up
 ALTER TABLE users
-ADD password TEXT NOT NULL;
+ADD COLUMN hashed_password TEXT NOT NULL
+DEFAULT 'unset';
 
 -- +goose down
 ALTER TABLE users
-DROP COLUMN password;
+DROP COLUMN hashed_password;

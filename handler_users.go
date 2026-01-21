@@ -34,11 +34,11 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusInternalServerError, "could not hash password", err)
 	}
 	user, err := cfg.dbQueries.CreateUser(r.Context(), database.CreateUserParams{
-		ID:        uuid.New(),
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
-		Email:     params.Email,
-		Password:  hashed,
+		ID:             uuid.New(),
+		CreatedAt:      time.Now().UTC(),
+		UpdatedAt:      time.Now().UTC(),
+		Email:          params.Email,
+		HashedPassword: hashed,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "could not create user", err)

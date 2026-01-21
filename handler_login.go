@@ -25,16 +25,8 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "incorrect email or password", err)
 		return
 	}
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not hash password", err)
-		return
-	}
-	pwValid, err := auth.CheckPasswordHash(params.Password, user.Password)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not validate password", err)
-		return
-	}
-	if !pwValid {
+	match, err := auth.CheckPasswordHash(params.Password, user.HashedPassword)
+	if err != nil || !match {
 		respondWithError(w, http.StatusUnauthorized, "incorrect email or password", nil)
 		return
 	}
