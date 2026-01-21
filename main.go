@@ -15,11 +15,14 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries      *database.Queries
+	platform       string
 }
 
 func main() {
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
+	platform := os.Getenv("PLATFORM")
+
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("could not connect to sql database: %s", err)
@@ -27,7 +30,7 @@ func main() {
 
 	const filepathRoot = "."
 	const port = "8080"
-	apiCfg := apiConfig{dbQueries: database.New(db)}
+	apiCfg := apiConfig{dbQueries: database.New(db), platform: platform}
 
 	smux := http.NewServeMux()
 
@@ -36,6 +39,7 @@ func main() {
 
 	smux.HandleFunc("GET /api/healthz", handlerReadiness)
 	smux.HandleFunc("POST /api/validate_chirp", handlerValidate)
+	smux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser)
 
 	smux.HandleFunc("GET /admin/metrics", apiCfg.handlerHits)
 	smux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)

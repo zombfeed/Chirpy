@@ -29,7 +29,7 @@ func handlerValidate(w http.ResponseWriter, r *http.Request) {
 
 	filtered := profanityFilter(params.Body)
 
-	respondWithJSON(w, 200, returnVals{CleanedBody: filtered})
+	respondWithJSON(w, http.StatusOK, returnVals{CleanedBody: filtered})
 }
 
 func profanityFilter(body string) string {

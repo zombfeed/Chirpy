@@ -1,4 +1,4 @@
-module github.com/zombfeedChirpy
+module github.com/zombfeed/Chirpy
 
 go 1.25.5
 
