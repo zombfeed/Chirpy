@@ -3,11 +3,8 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"slices"
 	"strings"
 )
-
-var profanity = []string{"kerfuffle", "sharbert", "fornax"}
 
 func handlerValidate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
@@ -29,14 +26,23 @@ func handlerValidate(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "Chirp is too long", nil)
 		return
 	}
-	respondWithJSON(w, 200, returnVals{CleanedBody: profanityFilter(params.Body)})
+
+	filtered := profanityFilter(params.Body)
+
+	respondWithJSON(w, 200, returnVals{CleanedBody: filtered})
 }
 
 func profanityFilter(body string) string {
+	profanity := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
+	}
+
 	splitBody := strings.Split(body, " ")
 	for i, word := range splitBody {
 		lword := strings.ToLower(word)
-		if slices.Contains(profanity, lword) {
+		if _, ok := profanity[lword]; ok {
 			splitBody[i] = "****"
 		}
 	}
