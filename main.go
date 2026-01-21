@@ -40,6 +40,7 @@ func main() {
 	smux.HandleFunc("GET /api/healthz", handlerReadiness)
 
 	smux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser)
+	smux.HandleFunc("POST /api/login", apiCfg.handlerLogin)
 
 	smux.HandleFunc("POST /api/chirps", apiCfg.handlerCreateChirp)
 	smux.HandleFunc("GET /api/chirps", apiCfg.handlerGetChirps)
