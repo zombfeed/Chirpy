@@ -16,12 +16,17 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries      *database.Queries
 	platform       string
+	secret         string
 }
 
 func main() {
-	godotenv.Load()
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("no .env file loaded: %w\n", err)
+	}
 	dbURL := os.Getenv("DB_URL")
 	platform := os.Getenv("PLATFORM")
+	secret := os.Getenv("API_SECRET_KEY")
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -30,8 +35,7 @@ func main() {
 
 	const filepathRoot = "."
 	const port = "8080"
-	apiCfg := apiConfig{dbQueries: database.New(db), platform: platform}
-
+	apiCfg := apiConfig{dbQueries: database.New(db), platform: platform, secret: secret}
 	smux := http.NewServeMux()
 
 	fileServer := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
