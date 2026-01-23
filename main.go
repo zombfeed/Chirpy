@@ -50,6 +50,9 @@ func main() {
 	smux.HandleFunc("GET /api/chirps", apiCfg.handlerGetChirps)
 	smux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerGetChirpByID)
 
+	smux.HandleFunc("POST /api/refresh", apiCfg.handlerRefresh)
+	smux.HandleFunc("POST /api/revoke", apiCfg.handlerRevoke)
+
 	smux.HandleFunc("GET /admin/metrics", apiCfg.handlerHits)
 	smux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 	server := &http.Server{

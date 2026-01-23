@@ -1,22 +1,24 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/zombfeed/Chirpy/internal/auth"
-)
-
-const (
-	defaultExpSeconds = 3600
+	"github.com/zombfeed/Chirpy/internal/database"
 )
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Password         string `json:"password"`
-		Email            string `json:"email"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}
+	type response struct {
+		User
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -36,31 +38,39 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "incorrect email or password", nil)
 		return
 	}
-	expSeconds := defaultExpSeconds
-	if params.ExpiresInSeconds != 0 {
-		expSeconds = params.ExpiresInSeconds
-		if expSeconds <= 0 || expSeconds > defaultExpSeconds {
-			expSeconds = defaultExpSeconds
-		}
+
+	accessToken, err := auth.MakeJWT(user.ID, cfg.secret, time.Hour)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "failed to create access token", err)
+		return
 	}
 
-	type response struct {
-		ID        string `json:"id"`
-		CreatedAt string `json:"created_at"`
-		UpdatedAt string `json:"updated_at"`
-		Email     string `json:"email"`
-		Token     string `json:"token"`
-	}
-	token, err := auth.MakeJWT(user.ID, cfg.secret, time.Duration(expSeconds)*time.Second)
+	refreshToken, err := auth.MakeRefreshToken()
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "not authorized user", err)
+		respondWithError(w, http.StatusUnauthorized, "failed to create refresh token", err)
+		return
+	}
+	_, err = cfg.dbQueries.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token:     refreshToken,
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+		UserID:    user.ID,
+		ExpiresAt: time.Now().Add(60 * time.Hour * 24),
+		RevokedAt: sql.NullTime{},
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "failed to create refresh token", err)
+		return
 	}
 
 	respondWithJSON(w, http.StatusOK, response{
-		ID:        user.ID.String(),
-		CreatedAt: user.CreatedAt.String(),
-		UpdatedAt: user.UpdatedAt.String(),
-		Email:     user.Email,
-		Token:     token,
+		User: User{
+			ID:        user.ID,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+			Email:     user.Email,
+		},
+		Token:        accessToken,
+		RefreshToken: refreshToken,
 	})
 }
