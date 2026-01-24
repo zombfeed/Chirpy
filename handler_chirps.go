@@ -72,10 +72,23 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	chirps, err := cfg.dbQueries.GetChirps(r.Context())
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "could not get chirps", err)
+		return
+	}
+	authorID := uuid.Nil
+	authorIDString := r.URL.Query().Get("author_id")
+	if authorIDString != "" {
+		authorID, err = uuid.Parse(authorIDString)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "invalid author ID", err)
+			return
+		}
 	}
 	chirpArray := []Chirp{}
-	for _, c := range chirps {
-		chirpArray = append(chirpArray, convertDBToChirp(c))
+	for _, chirp := range chirps {
+		if authorID != uuid.Nil && chirp.UserID != authorID {
+			continue
+		}
+		chirpArray = append(chirpArray, convertDBToChirp(chirp))
 	}
 	respondWithJSON(w, http.StatusOK, chirpArray)
 }
