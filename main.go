@@ -56,6 +56,8 @@ func main() {
 	smux.HandleFunc("POST /api/refresh", apiCfg.handlerRefresh)
 	smux.HandleFunc("POST /api/revoke", apiCfg.handlerRevoke)
 
+	smux.HandleFunc("POST /api/polka/webhooks", apiCfg.handlerUpgradeUser)
+
 	smux.HandleFunc("GET /admin/metrics", apiCfg.handlerHits)
 	smux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 	server := &http.Server{
