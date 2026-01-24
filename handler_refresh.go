@@ -11,6 +11,7 @@ func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
 	type response struct {
 		Token string `json:"token"`
 	}
+
 	refreshToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "could not find token", err)
@@ -19,7 +20,7 @@ func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
 
 	user, err := cfg.dbQueries.GetUserFromRefreshToken(r.Context(), refreshToken)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "refresh token does not exist or is expired", err)
+		respondWithError(w, http.StatusUnauthorized, "could not get user for refresh token", err)
 		return
 	}
 	accessToken, err := auth.MakeJWT(
@@ -31,6 +32,7 @@ func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "could not validate token", err)
 		return
 	}
+
 	respondWithJSON(w, http.StatusOK, response{
 		Token: accessToken,
 	})

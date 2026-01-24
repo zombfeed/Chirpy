@@ -22,6 +22,9 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		Password string `json:"password"`
 		Email    string `json:"email"`
 	}
+	type response struct {
+		User
+	}
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
 	err := decoder.Decode(&params)
@@ -34,9 +37,6 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusInternalServerError, "could not hash password", err)
 	}
 	user, err := cfg.dbQueries.CreateUser(r.Context(), database.CreateUserParams{
-		ID:             uuid.New(),
-		CreatedAt:      time.Now().UTC(),
-		UpdatedAt:      time.Now().UTC(),
 		Email:          params.Email,
 		HashedPassword: hashed,
 	})
@@ -45,7 +45,9 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, convertDBToUser(user))
+	respondWithJSON(w, http.StatusCreated, response{
+		User: convertDBToUser(user),
+	})
 }
 
 func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +58,6 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 
 	type response struct {
 		User
-		Token string `json:"token"`
 	}
 
 	accessToken, err := auth.GetBearerToken(r.Header)
@@ -66,7 +67,7 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 	}
 	userID, err := auth.ValidateJWT(accessToken, cfg.secret)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "invalid token", err)
+		respondWithError(w, http.StatusUnauthorized, "could not validate token", err)
 		return
 	}
 
@@ -92,8 +93,7 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	respondWithJSON(w, http.StatusOK, response{
-		User:  convertDBToUser(user),
-		Token: accessToken,
+		User: convertDBToUser(user),
 	})
 }
 

@@ -2,13 +2,21 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/zombfeed/Chirpy/internal/auth"
 	"github.com/zombfeed/Chirpy/internal/database"
 )
+
+var profanity = map[string]struct{}{
+	"kerfuffle": {},
+	"sharbert":  {},
+	"fornax":    {},
+}
 
 type Chirp struct {
 	ID        uuid.UUID `json:"id"`
@@ -28,6 +36,7 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusUnauthorized, "user not authorized", err)
 		return
 	}
+
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
 	err = decoder.Decode(&params)
@@ -42,18 +51,15 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	const maxChirpLength = 140
-	if len(params.Body) > maxChirpLength {
-		respondWithError(w, http.StatusBadRequest, "Chirp is too long", nil)
+	cleaned, err := validateChirp(params.Body)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error(), err)
 		return
 	}
 
 	chirp, err := cfg.dbQueries.CreateChirp(r.Context(), database.CreateChirpParams{
-		ID:        uuid.New(),
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
-		Body:      params.Body,
-		UserID:    validuser,
+		Body:   cleaned,
+		UserID: validuser,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "could not create user", err)
@@ -82,7 +88,7 @@ func (cfg *apiConfig) handlerGetChirpByID(w http.ResponseWriter, r *http.Request
 	}
 	chirp, err := cfg.dbQueries.GetChirpByID(r.Context(), chirpID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "could not find chirp", err)
+		respondWithError(w, http.StatusNotFound, "could get chirp", err)
 		return
 	}
 	respondWithJSON(w, http.StatusOK, convertDBToChirp(chirp))
@@ -96,4 +102,25 @@ func convertDBToChirp(chirp database.Chirp) Chirp {
 		Body:      chirp.Body,
 		UserID:    chirp.UserID,
 	}
+}
+
+func validateChirp(body string) (string, error) {
+	const maxChirpLength = 140
+	if len(body) > maxChirpLength {
+		return "", errors.New("Chirp is too long")
+	}
+	cleaned := getCleanedBody(body, profanity)
+	return cleaned, nil
+}
+
+func getCleanedBody(body string, profanity map[string]struct{}) string {
+	words := strings.Split(body, " ")
+	for i, word := range words {
+		lowWord := strings.ToLower(word)
+		if _, ok := profanity[lowWord]; ok {
+			words[i] = "****"
+		}
+	}
+	cleaned := strings.Join(words, " ")
+	return cleaned
 }

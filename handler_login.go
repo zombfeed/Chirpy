@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -28,18 +27,24 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "could not decode parameters", err)
 		return
 	}
+
 	user, err := cfg.dbQueries.GetUserByEmail(r.Context(), params.Email)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "incorrect email or password", err)
 		return
 	}
+
 	match, err := auth.CheckPasswordHash(params.Password, user.HashedPassword)
 	if err != nil || !match {
 		respondWithError(w, http.StatusUnauthorized, "incorrect email or password", nil)
 		return
 	}
 
-	accessToken, err := auth.MakeJWT(user.ID, cfg.secret, time.Hour)
+	accessToken, err := auth.MakeJWT(
+		user.ID,
+		cfg.secret,
+		time.Hour,
+	)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "failed to create access token", err)
 		return
@@ -50,13 +55,11 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "failed to create refresh token", err)
 		return
 	}
+
 	_, err = cfg.dbQueries.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
 		Token:     refreshToken,
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
 		UserID:    user.ID,
 		ExpiresAt: time.Now().Add(60 * time.Hour * 24),
-		RevokedAt: sql.NullTime{},
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "failed to create refresh token", err)
