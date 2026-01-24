@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -90,6 +91,18 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 		}
 		chirpArray = append(chirpArray, convertDBToChirp(chirp))
 	}
+	sortDirection := "asc"
+	sortString := r.URL.Query().Get("sort")
+	if sortString == "desc" {
+		sortDirection = "desc"
+	}
+	sort.Slice(chirpArray, func(i, j int) bool {
+		if sortDirection == "desc" {
+			return chirpArray[i].CreatedAt.After(chirpArray[j].CreatedAt)
+		}
+		return chirpArray[i].CreatedAt.Before(chirpArray[j].CreatedAt)
+	})
+
 	respondWithJSON(w, http.StatusOK, chirpArray)
 }
 
