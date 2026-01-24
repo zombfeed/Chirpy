@@ -13,7 +13,7 @@ import (
 
 const createChirp = `-- name: CreateChirp :one
 INSERT INTO chirps(id, created_at, updated_at, body, user_id)
-VALUES (get_random_uuid(), NOW(), NOW(), $1, $2)
+VALUES (gen_random_uuid(), NOW(), NOW(), $1, $2)
 RETURNING id, created_at, updated_at, body, user_id
 `
 
@@ -33,6 +33,16 @@ func (q *Queries) CreateChirp(ctx context.Context, arg CreateChirpParams) (Chirp
 		&i.UserID,
 	)
 	return i, err
+}
+
+const deleteChirpByID = `-- name: DeleteChirpByID :exec
+DELETE FROM chirps
+WHERE id = $1
+`
+
+func (q *Queries) DeleteChirpByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteChirpByID, id)
+	return err
 }
 
 const getChirpByID = `-- name: GetChirpByID :one
