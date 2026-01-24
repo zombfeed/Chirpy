@@ -48,6 +48,55 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 	respondWithJSON(w, http.StatusCreated, convertDBToUser(user))
 }
 
+func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}
+
+	type response struct {
+		User
+		Token string `json:"token"`
+	}
+
+	accessToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "access token is missing or malformed", err)
+		return
+	}
+	userID, err := auth.ValidateJWT(accessToken, cfg.secret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "invalid token", err)
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	err = decoder.Decode(&params)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not decode paramters", err)
+		return
+	}
+	hashed, err := auth.HashPassword(params.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not hash password", err)
+		return
+	}
+	user, err := cfg.dbQueries.UpdateUser(r.Context(), database.UpdateUserParams{
+		ID:             userID,
+		Email:          params.Email,
+		HashedPassword: hashed,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not update user", err)
+		return
+	}
+	respondWithJSON(w, http.StatusOK, response{
+		User:  convertDBToUser(user),
+		Token: accessToken,
+	})
+}
+
 func convertDBToUser(user database.User) User {
 	return User{
 		ID:        user.ID,

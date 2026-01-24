@@ -7,7 +7,13 @@ RETURNING *;
 SELECT * FROM refresh_tokens
 WHERE token = $1;
 
--- name: RevokeRefreshToken :exec
+-- name: RevokeRefreshToken :one
 UPDATE refresh_tokens
-SET revoked_at = $2, updated_at = $3
-WHERE token = $1;
+SET revoked_at = NOW(), updated_at = NOW()
+WHERE token = $1
+RETURNING *;
+
+-- name: GetUserFromRefreshToken :one
+SELECT users.* FROM users
+JOIN refresh_tokens ON users.id = refresh_tokens.user_id
+WHERE refresh_tokens.token = $1 AND refresh_tokens.revoked_at IS NULL AND refresh_tokens.expires_at > NOW();
