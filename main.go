@@ -17,6 +17,7 @@ type apiConfig struct {
 	dbQueries      *database.Queries
 	platform       string
 	secret         string
+	polkakey       string
 }
 
 func main() {
@@ -25,9 +26,21 @@ func main() {
 		log.Println("no .env file loaded: %w\n", err)
 	}
 	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL must be set")
+	}
 	platform := os.Getenv("PLATFORM")
+	if platform == "" {
+		log.Fatal("PLATFORM must be set")
+	}
 	secret := os.Getenv("API_SECRET_KEY")
-
+	if secret == "" {
+		log.Fatal("API_SECRET_KEY environment variable is not set")
+	}
+	polkaKey := os.Getenv("POLKA_KEY")
+	if polkaKey == "" {
+		log.Fatal("POLKA_KEY environment variable is not set")
+	}
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("could not connect to sql database: %s", err)
@@ -35,7 +48,12 @@ func main() {
 
 	const filepathRoot = "."
 	const port = "8080"
-	apiCfg := apiConfig{dbQueries: database.New(db), platform: platform, secret: secret}
+	apiCfg := apiConfig{
+		dbQueries: database.New(db),
+		platform:  platform,
+		secret:    secret,
+		polkakey:  polkaKey,
+	}
 	smux := http.NewServeMux()
 
 	fileServer := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
